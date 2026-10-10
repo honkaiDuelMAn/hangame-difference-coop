@@ -1,0 +1,7 @@
+scratch/
+node_modules/
+.superpowers/
+test-results/
+__pycache__/
+_site/
+public/game/*probe*.swf
