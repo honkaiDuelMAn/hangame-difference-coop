@@ -16,13 +16,20 @@ export class OriginalGame {
   }
   state(){return this.call('coopSnapshot');}
   start(character){return this.call('coopStart',character);}
-  reset(){this.player.ruffle().resume();this.call('coopReset');}
-  pause(value){value?this.player.ruffle().suspend():this.player.ruffle().resume();}
+  reset(){this.player.ruffle().resume();this.call('coopReset');this.paused=false;}
+  pause(value){
+    if(this.paused===value)return;
+    this.call('coopPause',value);this.paused=value;
+    value?this.player.ruffle().suspend():this.player.ruffle().resume();
+  }
   async input(seat,event){
     const before=this.call('coopBeginAction',seat);
     const focus=document.activeElement;
+    // Ruffle focuses its container on pointerdown. Focus it without scrolling
+    // first, so the native event uses the same canvas position as the overlay.
+    const target=this.player.shadowRoot.querySelector('#container');
+    target.focus({preventScroll:true});
     if(event.kind==='reload'){
-      const target=this.player.shadowRoot.querySelector('#container');target.focus();
       target.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',keyCode:32,which:32,bubbles:true,composed:true}));
       // Poll the original key-driven reload once while Space is held.
       this.call('coopReload');

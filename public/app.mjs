@@ -8,14 +8,15 @@ import {drawQR} from './qr.mjs';
 import {characters} from './characters.mjs';
 
 const $=id=>document.getElementById(id);
-let peer,inbox,engine,room,seat=null,busy=false,seq=0,jobs=Promise.resolve(),native={},lastPointerSent=0,backgroundPaused=false;
+let peer,inbox,engine,room,seat=null,busy=false,seq=0,jobs=Promise.resolve(),native={},lastPointerSent=0,manualPaused=false;
 let view={run:null,connected:false,phase:'selecting',characters:[null,null],paused:false,locked:0};
 const positions=[null,null];
 function message(text,error=false){$('message').textContent=text;$('message').classList.toggle('error',error);}
 function notice(text){$('gameNotice').textContent=text;}
 function send(event){if(peer?.channel?.readyState==='open')peer.send(event);}
 function updateNative(value){native=value||{};if(seat===0&&room)publish();}
-function snapshot(){return {type:'room',protocol:1,run:room.run,connected:room.connected,phase:room.phase,characters:room.characters,paused:room.paused,locked:Math.max(0,room.lockUntil-performance.now()),native};}
+function snapshot(){return {type:'room',protocol:1,run:room.run,connected:room.connected,phase:room.phase,characters:room.characters,paused:room.paused,pauseReason:document.hidden?'background':'manual',locked:Math.max(0,room.lockUntil-performance.now()),native};}
+function applyPause(){room.paused=manualPaused||document.hidden;engine.pause(room.paused);publish();}
 function publish(){if(!room)return;const state=snapshot();applyView(state);send(state);}
 function applyView(state){if(state.run!==view.run){seq=0;positions.fill(null);}view={...state};native=state.native||{};view.lockDeadline=performance.now()+(state.locked||0);render();}
 function pointer(seatNumber,pos){positions[seatNumber]=pos;renderPointers();}
@@ -33,6 +34,7 @@ function render(){
   $('connectedPanel').hidden=!connected;$('sharing').hidden=connected||!$('outputLink').value;$('initialControls').hidden=connected||busy||Boolean(peer&&!peer.closed);$('leaveRoom').hidden=!peer||peer.closed;
   for(let i=0;i<2;i++){const c=characters[view.characters?.[i]];$('player'+i+'Name').textContent=c?c.name+' · 선택 완료':'캐릭터 선택 중';$('player'+i+'Image').src=`./assets/${c?.image||(i?'girl':'boy')}.png`;}
   $('pauseOverlay').hidden=!playing||!view.paused;$('pauseGame').textContent=view.paused?'계속하기':'일시정지';$('pauseGame').disabled=!connected||!playing;$('newGame').disabled=!connected;
+  $('pauseText').textContent=view.pauseReason==='background'?'방장이 게임 탭으로 돌아오면 이어집니다.':'두 사람의 시간이 함께 멈췄어요.';
   const locked=performance.now()<view.lockDeadline;
   $('useLife').disabled=!canPlay||native.mode!=='puzzle'||!native.enabled||!(native.life>0)||locked;
   $('useGlasses').disabled=!canPlay||native.mode!=='puzzle'||!native.enabled||!(native.item>0)||locked;
@@ -64,28 +66,30 @@ export function receive(event){
   if(event.type==='notice'){notice(String(event.message||'').slice(0,160));return;}
   if(seat===0)handleRequest(1,event);
 }
-function request(event){if(!view.connected)return;if(seat===0)handleRequest(0,event);else send({...event,run:view.run});}
+function request(event){if(!view.connected)return;event={...event,run:view.run};if(seat===0)handleRequest(0,event);else send(event);}
 function handleRequest(actor,event){
   if(!room?.connected)return;
   if(event.type==='select'){
+    if(event.run!==room.run){report(actor,'이전 게임의 준비 요청입니다. 다시 준비해 주세요.');return;}
     const result=room.select(actor,event.character);if(!result.ok){report(actor,result.error);return;}
-    if(result.start){native={};engine.start(room.characters[0]);notice('두 사람의 훈련이 시작되었습니다. 정답 5곳을 함께 찾아요.');}
+    if(result.start){native={};engine.start(room.characters[0]);applyPause();notice('두 사람의 훈련이 시작되었습니다. 정답 5곳을 함께 찾아요.');}
     publish();return;
   }
   const currentRoom=room;
   jobs=jobs.then(async()=>{
     if(currentRoom!==room||!room.connected)return;
     if(event.type==='pause'&&event.run===room.run&&typeof event.paused==='boolean'&&room.phase==='playing'){
-      room.paused=event.paused;engine.pause(room.paused);$('pauseText').textContent='두 사람의 시간이 함께 멈췄어요.';publish();return;
+      if(!event.paused&&document.hidden){report(actor,'방장이 게임 탭으로 돌아오면 이어집니다.');return;}
+      manualPaused=event.paused;applyPause();return;
     }
     if(event.type==='reset'&&event.run===room.run){
-      engine.reset();room=new CoopRoom(crypto.randomUUID());room.setConnected(true);native={};seq=0;positions.fill(null);publish();notice('같은 연결로 다시 캐릭터를 골라 주세요.');return;
+      engine.reset();manualPaused=false;room=new CoopRoom(crypto.randomUUID());room.setConnected(true);native={};seq=0;positions.fill(null);publish();notice('같은 연결로 다시 캐릭터를 골라 주세요.');return;
     }
     if(event.type!=='input')return;
     const state=engine.state(),result=room.authorize(actor,event,state,performance.now());
     if(!result.ok){report(actor,result.error);return;}
     await engine.input(actor,result.event);publish();
-  }).catch(error=>{message(error.message,true);room.paused=true;engine.pause(true);publish();});
+  }).catch(error=>{message(error.message,true);manualPaused=true;applyPause();});
 }
 function report(actor,text){actor===seat?notice(text):send({type:'notice',message:text});}
 function action(kind,x,y){if(!view.connected||view.phase!=='playing'||view.paused)return;request({type:'input',run:view.run,epoch:native.epoch,seq:++seq,kind,x,y});}
@@ -113,7 +117,7 @@ async function shareCode(code,kind){
 async function create(){
   if(busy)return;busy=true;render();message('원본 게임과 초대 링크를 준비하고 있습니다…');
   try{
-    peer?.close();inbox?.close();seat=0;room=new CoopRoom(crypto.randomUUID());native={};view={run:room.run,connected:false,phase:'selecting',characters:[null,null],paused:false,locked:0};
+    peer?.close();inbox?.close();seat=0;manualPaused=false;room=new CoopRoom(crypto.randomUUID());native={};view={run:room.run,connected:false,phase:'selecting',characters:[null,null],paused:false,locked:0};
     if(!engine){engine=new OriginalGame($('gameContainer'),updateNative);await engine.load();}else engine.reset();
     $('cover').hidden=true;$('remoteVideo').hidden=true;await prepareAudio();
     peer=makePeer(engine.stream);const code=await peer.offer(Array.from(crypto.getRandomValues(new Uint8Array(3)),n=>n.toString(16).padStart(2,'0')).join('').toUpperCase());
@@ -140,7 +144,7 @@ $('copyLink').addEventListener('click',async()=>{try{await navigator.clipboard.w
 $('shareLink').addEventListener('click',async()=>{if(!navigator.share){$('copyLink').click();return;}try{await navigator.share({title:'한게임 틀린그림찾기 · 둘이 함께',url:$('outputLink').value});}catch(error){if(error.name!=='AbortError')message(error.message,true);}});
 $('showQR').addEventListener('click',()=>{drawQR($('largeQR'),$('outputLink').value);$('qrDialog').showModal();});$('closeQR').addEventListener('click',()=>$('qrDialog').close());
 $('leaveRoom').addEventListener('click',()=>{inbox?.close();peer?.close();$('outputLink').value='';render();});
-document.addEventListener('visibilitychange',()=>{if(seat!==0||!room?.connected||room.phase!=='playing')return;if(document.hidden&&!room.paused){backgroundPaused=true;request({type:'pause',run:view.run,paused:true});$('pauseText').textContent='방장이 게임 탭으로 돌아오면 이어집니다.';}else if(!document.hidden&&backgroundPaused){backgroundPaused=false;request({type:'pause',run:view.run,paused:false});}});
+document.addEventListener('visibilitychange',()=>{if(seat===0&&room?.connected&&room.phase==='playing')applyPause();});
 window.addEventListener('pagehide',()=>peer?.close());
 setInterval(()=>{if(view.phase==='playing')render();},150);
 render();

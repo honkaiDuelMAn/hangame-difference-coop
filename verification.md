@@ -1,0 +1,10 @@
+# Verification — 2026-10-11
+
+- User steering: only the original boy/girl pencil graphics are present, so 1P is boy and 2P is girl. Both still confirm readiness. Native measured hotspots are (6.5,6.3) and (8.55,4) game units, rather than bitmap centers.
+- `node --test --test-concurrency=1 tests/*.test.mjs`: **21/21 passed**, 48.684 seconds. Uses two independent Chrome processes with real original Flash runtime, generated video/audio, invitation/answer exchange and local QR.
+- Tests cover original correct answers and red/blue rings, duplicate clicks, shared life/glasses with one-second lock across buttons/native HUD/keyboard, live pointers at two viewport sizes, native picture transition, both original minigames, independent ammunition/reload, shared pause, same-connection reset and disconnect freeze.
+- Independent final review found four Important issues. Fixed in one pass: original timer pause/unpause; preventScroll focus before native click coordinates; separate visibility/manual pause reasons; current-run validation for readiness. Added real-browser regressions at 1280×720 and for countdown immediately after resume. All passed.
+- `python -m unittest discover -s tests -p '*_test.py'`: **4/4 passed**. Bridge build also asserts that every original AVM1 tag remains byte-identical. 190 original picture/coordinate pairs remain present. Staging excludes diagnostic SWFs.
+- Source whitespace check passes. Archived original XML files are deliberately excluded from whitespace cleanup and preserved byte-for-byte.
+- Publication checks: run `python tools/verify_live.py URL` against the Git commit and `LIVE_URL=URL node tests/live-smoke.mjs` against the actual public SWF, without instrumentation. Results recorded in the ledger after publication.
+- Scope: browser evidence comes from this Windows machine and separate Chrome processes. Arbitrary cross-network NAT combinations and every mobile browser are not verified. Connection uses the same direct STUN-only method as the InuYasha reference.

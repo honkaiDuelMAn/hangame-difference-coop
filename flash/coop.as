@@ -32,6 +32,7 @@ b.start = function(character) {
 b.reset = function() {
     var f = _global.Framework;
     f.root.timebar_mc.timer.clearTimer();
+    this.pausedTimer = null;
     f.logic.allRemoveEnemy();
     f.logic.allRemoveHint();
     f.logic.clickEnabled = false;
@@ -40,6 +41,19 @@ b.reset = function() {
     this.miniKey = "";
     this.marks = {};
     f.ui.showCharacter();
+    return true;
+};
+b.pause = function(value) {
+    var timer = _global.Framework.root.timebar_mc.timer;
+    if (value) {
+        if (timer.started && !timer.paused) {
+            this.pausedTimer = timer;
+            timer.pause();
+        }
+    } else if (this.pausedTimer != null) {
+        this.pausedTimer.unpause();
+        this.pausedTimer = null;
+    }
     return true;
 };
 b.begin = function(seat) {
@@ -116,6 +130,7 @@ b.poll = function() {
 };
 ei.addCallback("coopStart", b, b.start);
 ei.addCallback("coopReset", b, b.reset);
+ei.addCallback("coopPause", b, b.pause);
 ei.addCallback("coopBeginAction", b, b.begin);
 ei.addCallback("coopEndAction", b, b.end);
 ei.addCallback("coopSnapshot", b, b.snapshot);

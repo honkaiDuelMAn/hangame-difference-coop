@@ -7,3 +7,4 @@ public/game/**/*.xml -text
 *.py text eol=lf
 *.html text eol=lf
 *.css text eol=lf
+*.md text eol=lf
