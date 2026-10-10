@@ -1,0 +1,5 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Original Flash runtime probe</title><style>body{margin:0}ruffle-player{display:block;width:640px;height:480px}</style><script src="/ruffle/ruffle.js"></script></head><body><script>
+window.probeEvent=(kind,data)=>{window.probeReady=kind;};
+window.coopEvent=(kind,data)=>{if(kind==='ready')window.coopReady=true;else window.coopNative=data;};
+(async()=>{const p=window.player=RufflePlayer.newest().createPlayer();document.body.append(p);await p.ruffle().load({url:location.search.includes('coop')?'/game/game-coop-probe.swf':'/game/probe-game.swf',base:'/game/',allowScriptAccess:true,autoplay:'on',unmuteOverlay:'hidden',splashScreen:false,logLevel:'warn'});})();
+</script></body></html>

@@ -1,0 +1,15 @@
+Original game: Hangame Flash / NHN, 틀린그림찾기 첩보요원 양성소.
+User-provided play reference: https://vidkidz.tistory.com/9066
+Standard original SWF and 190 picture/coordinate pairs: public offline archive linked from https://flashgamemall.tistory.com/2209 (PolarZero reference).
+Original game assets and their copyrights remain with their respective owners.
+Original pencil cursor PNGs were rendered from the original SWF sprites 422 and 408; registration measured against the original parent cursor.
+
+Ruffle 0.6.0 self-hosted runtime: https://github.com/ruffle-rs/ruffle
+Dual MIT / Apache-2.0. License texts included under public/ruffle/.
+
+QR Code Generator library by Project Nayuki: https://www.nayuki.io/page/qr-code-generator-library
+MIT license retained in public/vendor/qrcodegen.mjs.
+
+Manual WebRTC link/QR/answer-relay approach adapted from the user's InuYasha PvP implementation:
+https://github.com/honkaiDuelMAn/inuyasha-pvp
+Game cooperation, original-engine bridge, pointer positioning and responsive interface implemented for this repository.

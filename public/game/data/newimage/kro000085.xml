@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-16"?>
+
+<wf>
+	<diff_header bmp_filname="kro000142.bmp" dif_filname="kro000142.dif" category="0" size="300, 430" reg_date="20030202" level="1" clip_count="10" offerer_name="kei" offerer_id="keilove1" offerer_msg="test" theme="kro" theme_id="142">
+		<clip rect="0, 13, 52, 72"/>
+		<clip rect="132, 15, 65, 51"/>
+		<clip rect="149, 112, 41, 36"/>
+		<clip rect="220, 89, 63, 56"/>
+		<clip rect="90, 151, 38, 89"/>
+		<clip rect="0, 300, 28, 56"/>
+		<clip rect="71, 324, 85, 60"/>
+		<clip rect="176, 234, 45, 96"/>
+		<clip rect="176, 336, 55, 27"/>
+		<clip rect="255, 368, 45, 62"/>
+	</diff_header>
+</wf>
+

@@ -1,0 +1,81 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {root, chromium, launchOptions, serve, nativeCall} from './browser-helper.mjs';
+
+const own = path.join(root, 'scratch/mini-diagnosis');
+fs.mkdirSync(own, {recursive: true});
+const local = await serve();
+const browser = await chromium.launch(launchOptions);
+try {
+ const page = await browser.newPage({viewport: {width: 900, height: 700}});
+ const errors = [];
+ page.on('pageerror', e => errors.push(e.message));
+ await page.route('**/game/probe-game.swf', route => route.fulfill({contentType: 'application/x-shockwave-flash', body: fs.readFileSync(path.join(own, 'mini-probe.swf'))}));
+ await page.goto(local.url + 'tests/probe.html');
+ await page.waitForFunction(() => window.probeReady === 'ready');
+ await page.waitForTimeout(1000);
+ await nativeCall(page, 'probeSet', '_root', 'start', true);
+ await nativeCall(page, 'probeSet', '_global.Framework.logic', 'characterCode', 1);
+ await nativeCall(page, 'miniCallExact', '_global.Framework.ui', 'showMain', []);
+ await page.waitForTimeout(1700);
+ await nativeCall(page, 'miniCallExact', '_global.Framework.ui', 'showMinigame', [1]);
+ await page.waitForTimeout(1700);
+ await page.mouse.click(550,430);
+ await page.waitForFunction(() => player.ruffle().callExternalInterface('probeRead','_root.minigame_mc.clickEnabled') === true, null, {timeout:8000});
+ const inspect = p => nativeCall(page, 'miniInspect', p);
+ const report = {errors, initial: await inspect('_root.minigame_mc'), cursor: await inspect('_root.minigame_mc.cursor_mc')};
+ for (const fn of ['onMouseDown','onMouseUp']) await nativeCall(page, 'probeHook', '_root.minigame_mc.cursor_mc', fn);
+ for (const fn of ['ef_gun','ef_shot','shot_effect','miss','ef_window']) await nativeCall(page, 'probeHook', '_root.minigame_mc', fn);
+ report.targets = await nativeCall(page, 'probeTargets');
+ await page.mouse.click(315,220);
+ await page.waitForTimeout(100);
+ report.afterClick = await inspect('_root.minigame_mc');
+ report.trace = await nativeCall(page, 'probeRead', '_root.probeTrace');
+ for (const method of ['onMouseDown','onMouseUp']) await nativeCall(page, 'miniCallExact', '_root.minigame_mc.cursor_mc', method, []);
+ await page.waitForTimeout(100);
+ report.afterExact = await inspect('_root.minigame_mc');
+ report.traceExact = await nativeCall(page, 'probeRead', '_root.probeTrace');
+ await page.mouse.move(315,220);
+ await page.mouse.down();
+ report.downImmediate = await inspect('_root.minigame_mc');
+ await page.waitForTimeout(100);
+ report.downHeld = await inspect('_root.minigame_mc');
+ await page.mouse.up();
+ report.afterHeld = await inspect('_root.minigame_mc');
+ report.traceHeld = await nativeCall(page, 'probeRead', '_root.probeTrace');
+ const targets = await nativeCall(page,'probeTargets');
+ const victim = targets.find(t => t.visible && !t.dead && t.frame === 6);
+ report.victim = victim;
+ if (victim) {
+   await page.mouse.move((victim.bounds.xMin+victim.bounds.xMax)/2,(victim.bounds.yMin+victim.bounds.yMax)/2);
+   await nativeCall(page,'miniCallExact','_root.minigame_mc','shot_effect',[]);
+   report.afterShotEffect = await inspect('_root.minigame_mc');
+   report.targetsAfterShotEffect = await nativeCall(page,'probeTargets');
+ }
+ await page.keyboard.press('Space');
+ await page.waitForTimeout(100);
+ report.afterSpace = await inspect('_root.minigame_mc');
+ await page.keyboard.down('Space');
+ await page.waitForTimeout(100);
+ report.afterSpaceHeld = await inspect('_root.minigame_mc');
+ await page.keyboard.up('Space');
+ await page.waitForTimeout(600);
+ const liveTargets = await nativeCall(page,'probeTargets');
+ const live = liveTargets.find(t => t.visible && !t.dead && t.frame === 6);
+ report.liveHeld = live;
+ if(live){
+   report.targetInspect = await inspect('_root.minigame_mc.target'+live.index);
+   await page.mouse.move((live.bounds.xMin+live.bounds.xMax)/2,(live.bounds.yMin+live.bounds.yMax)/2);
+   await page.mouse.down();
+   await page.waitForTimeout(100);
+   report.hitHeld = await inspect('_root.minigame_mc');
+   report.targetsHitHeld = await nativeCall(page,'probeTargets');
+   await page.mouse.up();
+ }
+ report.allTrace = await nativeCall(page,'probeRead','_root.probeTrace');
+ report.targetKinds = [];
+ for(let i=1;i<=15;i++) report.targetKinds.push({i,...await inspect('_root.minigame_mc.target'+i)});
+ await page.screenshot({path:path.join(own,'started.png')});
+ fs.writeFileSync(path.join(own,'initial.json'),JSON.stringify(report,null,2));
+ console.log(JSON.stringify({initial:report.initial.keys,bulletHeld:report.downHeld.clips.bullet_mc,bulletSpace:report.afterSpace.clips.bullet_mc,bulletSpaceHeld:report.afterSpaceHeld.clips.bullet_mc,hitHeld:report.hitHeld?.keys,targetKinds:report.targetKinds.map(t=>({i:t.i,keys:t.keys,ani:t.clips.ani}))},null,2));
+} finally { await browser.close(); await new Promise(resolve => local.server.close(resolve)); }

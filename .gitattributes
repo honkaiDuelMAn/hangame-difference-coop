@@ -1,0 +1,9 @@
+*.swf binary
+*.wasm binary
+*.png binary
+public/game/**/*.xml -text
+*.mjs text eol=lf
+*.as text eol=lf
+*.py text eol=lf
+*.html text eol=lf
+*.css text eol=lf

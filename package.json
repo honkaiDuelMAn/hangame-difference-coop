@@ -1,0 +1,12 @@
+{
+  "name": "hangame-difference-coop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs",
+    "test:rules": "node --test tests/coop-rules.test.mjs tests/transport.test.mjs",
+    "stage": "python tools/pages.py _site"
+  },
+  "engines": {"node": ">=22"}
+}
