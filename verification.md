@@ -9,6 +9,7 @@
 - Full original-game integration covers native red/blue rings, actual next picture, both original minigames, outside intro clicks, per-seat bullets/reload, scrolling, clocks, visibility/manual pause, current-run readiness, reset and disconnect.
 - Same-browser reply receipt race reproduced with a failing test: opening the data channel could close the inbox before acceptance returned, dropping its acknowledgement. Shutdown now sends the pending success/failure receipt before closing; the regression passes.
 - Independent read-only reviews approved the compact codec, simplified display geometry, guarded native item/intro handlers and reply shutdown. Staging contains **418 static files** and excludes diagnostic SWFs.
+- Updated [Pages deployment 38118663517](https://github.com/honkaiDuelMAn/hangame-difference-coop/actions/runs/38118663517) succeeded for runtime commit `e40a0e3194a56d59377b936221bdeb8c1258b845`. Live manifest matches all **418 committed files**, nine served samples match SHA-256, and no probes are published. Production-only public smoke passed using two independent Chrome processes: actual reply-link relay, received game video, 2P native find, shared items/one-second lock, pause and reset; zero page errors. Actual invitation URL **2459 → 819** characters, response URL **2044 → 601** characters. No SWF replacement or diagnostic instrumentation was used.
 
 ## Original release
 
