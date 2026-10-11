@@ -28,7 +28,7 @@ async function startServer() {
 }
 
 // Removing addTrack or omitting a combined received stream must break real canvas frames.
-test('two independent browsers exchange data and generated canvas video plus audio', {timeout: 90000}, async () => {
+for(const format of [3,2])test(`two independent browsers exchange data and canvas video/audio with HG${format}`, {timeout: 90000}, async () => {
   const {server, base} = await startServer();
   const browsers = [];
   const issues = [];
@@ -53,7 +53,7 @@ test('two independent browsers exchange data and generated canvas video plus aud
         };
       });
     }
-    const offer = await host.evaluate(async () => {
+    const offer = await host.evaluate(async format => {
       const canvas = document.querySelector('#source'), context = canvas.getContext('2d');
       window.paint = color => { context.fillStyle = color; context.fillRect(0, 0, canvas.width, canvas.height); };
       paint('#ef1634');
@@ -66,22 +66,27 @@ test('two independent browsers exchange data and generated canvas video plus aud
       window.oscillator = audio.createOscillator(); oscillator.connect(destination); oscillator.start();
       window.outgoing = new MediaStream([...canvas.captureStream(20).getVideoTracks(), ...destination.stream.getAudioTracks()]);
       window.peer = new ManualPeer({...peerOptions, mediaStream: outgoing});
+      peer.codeFormat=format;
       return peer.offer('ABCDEF');
-    });
-    assert.match(offer, /^HG2-/);
+    },format);
+    assert.ok(offer.startsWith(`HG${format}-`));
     const inviteQR = await host.evaluate(async offer => {
       const {drawQR} = await import('/qr.mjs');
       const {makeConnectionLink} = await import('/net/connection-link.mjs');
       const link = makeConnectionLink(offer, 'invite', location.href);
       let error = null;
       try { drawQR(document.querySelector('#qr'), link); } catch (failure) { error = failure.message; }
-      return {codeLength: offer.length, linkLength: link.length, width: document.querySelector('#qr').width, error};
+      const {encodeCode,decodeCode}=await import('/net/connection-code.mjs');
+      const old=await encodeCode(await decodeCode(offer),{format:2});
+      const oldLink=makeConnectionLink(old,'invite',location.href);
+      return {codeLength: offer.length, linkLength: link.length, oldLinkLength:oldLink.length, width: document.querySelector('#qr').width, error};
     }, offer);
     assert.equal(inviteQR.error, null, 'the real media invitation must fit a local QR: ' + JSON.stringify(inviteQR));
     const answer = await guest.evaluate(async offer => {
       window.peer = new ManualPeer(peerOptions);
       return peer.answer(offer);
     }, offer);
+    assert.ok(answer.startsWith(`HG${format}-`),'reply must match the invitation format so a cached old host can read it');
     await host.evaluate(answer => peer.accept(answer), answer);
     await Promise.all([host, guest].map(page => page.waitForFunction(() => states.includes('connected'), null, {timeout: 20000})));
     await host.evaluate(() => peer.send({type: 'snapshot', score: 17, room: 'ABCDEF'}));
@@ -127,7 +132,7 @@ test('two independent browsers exchange data and generated canvas video plus aud
     await guest.waitForFunction(() => states.includes('closed'), null, {timeout: 3000});
     assert.equal(await host.evaluate(() => outgoing.getTracks().every(track => track.readyState === 'live')), true, 'peer must not stop the game-owned source tracks');
     assert.deepEqual(issues, []);
-    console.log(JSON.stringify({transport: 'two Chrome browser processes', stats, inviteQR, generatedMedia: 'canvas + Web Audio', data: 'bidirectional', heartbeat: 'ping/pong filtered'}));
+    console.log(JSON.stringify({format,transport: 'two Chrome browser processes', stats, inviteQR, generatedMedia: 'canvas + Web Audio', data: 'bidirectional', heartbeat: 'ping/pong filtered'}));
   } finally {
     for (const browser of browsers) await browser.close();
     await new Promise(resolve => server.close(resolve));

@@ -58,7 +58,7 @@ function probeHook(path, method) {
                 args.push(d);
             } else args.push(a);
         }
-        _root.probeLast = {path:path, method:method, args:args, x:_root._xmouse, y:_root._ymouse};
+        _root.probeLast = {path:path, method:method, args:args, x:_root._xmouse, y:_root._ymouse,name:this._name,parent:this._parent._name};
         if (_root.probeTrace == undefined) _root.probeTrace = [];
         _root.probeTrace.push(_root.probeLast);
         return original.apply(this, arguments);
@@ -75,6 +75,15 @@ function probeState() {
     }
     return {life:s.life, item:s.item, find:s.find, level:s.level, stage:s.stage, score:s.score, character:l.characterCode, enabled:l.clickEnabled, frame:_root._currentframe, boxes:boxes, order:l.orderMap};
 }
+function probePicture(x,y,w,h) {
+    var im = _global.Framework.logic.im;
+    var left = []; var right = [];
+    for(var row=y; row<y+h; row++) for(var col=x; col<x+w; col++) {
+        left.push(im.bm0.getPixel(col,row));
+        right.push(im.bm1.getPixel(col,row));
+    }
+    return {left:left,right:right,m1:im.mc1.img.transform.concatenatedMatrix,m2:im.mc2.img.transform.concatenatedMatrix};
+}
 flash.external.ExternalInterface.addCallback("probeInspect", this, probeInspect);
 flash.external.ExternalInterface.addCallback("probeCall", this, probeCall);
 flash.external.ExternalInterface.addCallback("probeSet", this, probeSet);
@@ -84,4 +93,5 @@ flash.external.ExternalInterface.addCallback("probeCursorAssets", this, probeCur
 flash.external.ExternalInterface.addCallback("probeTargets", this, probeTargets);
 flash.external.ExternalInterface.addCallback("probeHook", this, probeHook);
 flash.external.ExternalInterface.addCallback("probeState", this, probeState);
+flash.external.ExternalInterface.addCallback("probePicture", this, probePicture);
 flash.external.ExternalInterface.call("probeEvent", "ready");

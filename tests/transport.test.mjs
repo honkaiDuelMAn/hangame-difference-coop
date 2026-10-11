@@ -14,7 +14,7 @@ const base = 'https://example.test/hangame-difference-coop/index.html?discard=ye
 // Removing media SDP preservation would corrupt the description exchanged by peers.
 test('compressed HG2 codes preserve a media offer and tolerate pasted whitespace', async () => {
   assert.ok(codec, 'The connection-code module must be available');
-  const code = await codec.encodeCode(fixture);
+  const code = await codec.encodeCode(fixture, {format: 2});
   assert.match(code, /^HG2-[A-Za-z0-9_-]+$/);
   assert.deepEqual(await codec.decodeCode(' \n' + code.slice(0, 12) + '\n' + code.slice(12)), fixture);
 });
@@ -82,6 +82,15 @@ test('answer relay delivers once and carries acceptance failures back to the sen
 });
 
 // A missing host tab must not leave the user waiting forever.
+test('answer receipt survives connection completion closing its inbox during accept', async () => {
+  const session='bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';let accepted=0;
+  const inbox=new relay.AnswerInbox(session,async()=>{accepted++;inbox.close();});
+  try{
+    await relay.deliverAnswer('HG3-good',session,{timeout:400});
+    assert.equal(accepted,1);assert.equal(inbox.closed,true);
+  }finally{inbox.close();}
+});
+
 test('answer relay reports a missing original tab', async () => {
   assert.ok(relay, 'The reply-relay module must be available');
   await assert.rejects(() => relay.deliverAnswer('HG1-good', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', {timeout: 30}), /방 탭/);

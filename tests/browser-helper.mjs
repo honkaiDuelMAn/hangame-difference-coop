@@ -13,12 +13,17 @@ export async function serve(){
  await new Promise(r=>server.listen(0,'127.0.0.1',r));return {server,url:`http://127.0.0.1:${server.address().port}/`};
 }
 export async function connect(host,guest,url,{relay=false}={}){
- await host.goto(url);await host.locator('#createRoom').click();await host.waitForFunction(()=>document.querySelector('#outputLink').value.includes('#invite='),null,{timeout:45000});
- await guest.goto(await host.locator('#outputLink').inputValue());await guest.waitForFunction(()=>document.querySelector('#outputLink').value.includes('#answer='),null,{timeout:45000});
+ await host.goto(url);await host.locator('#createRoom').click();await host.waitForFunction(()=>/#(?:invite|i)=/.test(document.querySelector('#outputLink').value),null,{timeout:45000});
+ await guest.goto(await host.locator('#outputLink').inputValue());await guest.waitForFunction(()=>/#(?:answer|a)=/.test(document.querySelector('#outputLink').value),null,{timeout:45000});
  const answer=await guest.locator('#outputLink').inputValue();
  if(relay){const receipt=await host.context().newPage();await receipt.goto(answer);await receipt.waitForFunction(()=>document.querySelector('#lobbyTitle').textContent==='응답 전달 완료');await receipt.close();await host.bringToFront();}
  else{await host.locator('#answerInput').fill(answer);await host.locator('#answerForm button').click();}
- await host.waitForFunction(()=>document.querySelector('#connectionBadge').textContent==='연결 완료');await guest.waitForFunction(()=>document.querySelector('#connectionBadge').textContent==='연결 완료');
+ try{
+  await host.waitForFunction(()=>document.querySelector('#connectionBadge').textContent==='연결 완료');await guest.waitForFunction(()=>document.querySelector('#connectionBadge').textContent==='연결 완료');
+ }catch(error){
+  for(const [name,page] of [['host',host],['guest',guest]])console.log(name,await page.evaluate(()=>({badge:document.querySelector('#connectionBadge').textContent,message:document.querySelector('#message').textContent})));
+  throw error;
+ }
 }
 export async function clickAt(page,x,y){const r=await page.locator('#stage').boundingBox();await page.mouse.click(r.x+r.width*x/640,r.y+r.height*y/480);}
 export async function nativeCall(page,name,...args){return page.evaluate(({name,args})=>document.querySelector('ruffle-player').ruffle().callExternalInterface(name,...args),{name,args});}

@@ -1,5 +1,17 @@
 # Verification — 2026-10-11
 
+## Link, display and native-item follow-up
+
+- Final stable `node --test --test-concurrency=1 tests/*.test.mjs`: **34/34 passed**, 91.295 seconds. Python preservation/staging checks: **4/4 passed**. All **1573 original main SWF tags** remain byte-identical.
+- HG3 restores every SDP byte, including unknown fields. Sanitized real-media fixtures shrink offer **2366 → 754** and answer **1958 → 530** characters. A fresh two-browser invitation URL shrank **2438 → 808** characters. HG1/HG2 compatibility, invitation-matched replies, corruption/expansion limits, immutable golden fixtures, data, video/audio and local QR all pass.
+- The Heaven region has **765 identical native source pixels**; it is not an original answer. Actual rendered glyph comparisons produce **zero differing pixels** at 100%, 125% and 150% device scaling, each at section widths 642, 802, 962, 796 and 901. Both crops are compared without resampling. Common compatible surface sizing and subpixel bitmap translations fix the sampling phase; original photos and answer hitboxes remain intact. Unusual display-scale fallback remains responsive but is outside these exact-pixel comparisons.
+- Glasses still activate the native 3D effect and consume one item. The native mouse leaves the item hover area, avoiding the shortcut card. Life still consumes one heart; both seats and all controls retain the shared one-second lock. Original native item handlers and shape-checked minigame START handlers avoid unreliable synthetic button-release state.
+- Full original-game integration covers native red/blue rings, actual next picture, both original minigames, outside intro clicks, per-seat bullets/reload, scrolling, clocks, visibility/manual pause, current-run readiness, reset and disconnect.
+- Same-browser reply receipt race reproduced with a failing test: opening the data channel could close the inbox before acceptance returned, dropping its acknowledgement. Shutdown now sends the pending success/failure receipt before closing; the regression passes.
+- Independent read-only reviews approved the compact codec, simplified display geometry, guarded native item/intro handlers and reply shutdown. Staging contains **418 static files** and excludes diagnostic SWFs.
+
+## Original release
+
 - User steering: only the original boy/girl pencil graphics are present, so 1P is boy and 2P is girl. Both still confirm readiness. Native measured hotspots are (6.5,6.3) and (8.55,4) game units, rather than bitmap centers.
 - `node --test --test-concurrency=1 tests/*.test.mjs`: **21/21 passed**, 48.684 seconds. Uses two independent Chrome processes with real original Flash runtime, generated video/audio, invitation/answer exchange and local QR.
 - Tests cover original correct answers and red/blue rings, duplicate clicks, shared life/glasses with one-second lock across buttons/native HUD/keyboard, live pointers at two viewport sizes, native picture transition, both original minigames, independent ammunition/reload, shared pause, same-connection reset and disconnect freeze.

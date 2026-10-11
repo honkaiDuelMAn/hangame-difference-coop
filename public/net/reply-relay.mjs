@@ -17,12 +17,14 @@ export class AnswerInbox {
       try{await accept(data.code);receipt={type:'receipt',request:data.request,ok:true};}
       catch(error){receipt={type:'receipt',request:data.request,ok:false,message:error.message};}
       finally{this.working=false;}
-      if(this.closed)return;
+      // The data channel can open while accept is still finishing. Complete
+      // this receipt before closing the same-browser reply channel.
+      if(this.closed){this.channel.postMessage(receipt);this.channel.close();return;}
       this.receipts.set(data.request,receipt);if(this.receipts.size>16)this.receipts.delete(this.receipts.keys().next().value);
       this.channel.postMessage(receipt);
     });
   }
-  close(){this.closed=true;this.channel.close();}
+  close(){this.closed=true;if(!this.working)this.channel.close();}
 }
 export function deliverAnswer(code,session,{timeout=8000}={}){
   const channel=channelFor(session),request=crypto.randomUUID();

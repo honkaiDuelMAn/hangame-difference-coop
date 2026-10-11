@@ -6,8 +6,10 @@ import {OriginalGame} from './engine.mjs';
 import {prepareAudio,setHostVolume} from './media.mjs';
 import {drawQR} from './qr.mjs';
 import {characters} from './characters.mjs';
+import {fitGameFrame} from './display.mjs';
 
 const $=id=>document.getElementById(id);
+fitGameFrame(document.querySelector('.play-section'));
 let peer,inbox,engine,room,seat=null,busy=false,seq=0,jobs=Promise.resolve(),native={},lastPointerSent=0,manualPaused=false;
 let view={run:null,connected:false,phase:'selecting',characters:[null,null],paused:false,locked:0};
 const positions=[null,null];

@@ -34,9 +34,14 @@ test('actual Flash co-op: reservation, shared finds, colored rings, cursors, ite
     await clickAt(guest,(remaining.bounds.xMin+remaining.bounds.xMax)/2,(remaining.bounds.yMin+remaining.bounds.yMax)/2);await host.waitForTimeout(130);
   }
   await host.waitForFunction(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').stage===2,null,{timeout:8000});await guest.waitForFunction(()=>document.querySelector('#stage').dataset.epoch.includes(':1:2:'));
+  // The stage number changes before its loading/entrance animation finishes.
+  // Do not force the diagnostic minigame entry during that native transition.
+  await host.waitForFunction(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').enabled===true);
   // Enter both original embedded minigames; only this test probe changes entry.
   for(const kind of ['showMinigame','showMinigame2']){
-    await nativeCall(host,'probeCall','_global.Framework.ui',kind,1);await host.waitForTimeout(1700);await clickAt(host,550,430);await host.waitForFunction(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').mode==='mini'&&document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').enabled===true);
+    await nativeCall(host,'probeCall','_global.Framework.ui',kind,1);await host.waitForTimeout(1700);
+    await clickAt(host,100,100);await host.waitForTimeout(120);assert.equal((await nativeCall(host,'coopSnapshot')).mode,'mini-intro','an outside click cannot start the minigame');
+    await clickAt(host,550,430);await host.waitForFunction(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').mode==='mini'&&document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').enabled===true);
     const before=await nativeCall(host,'coopSnapshot');assert.ok(before.bullets[0]>0);assert.equal(before.bullets[0],before.bullets[1]);
     await guest.waitForFunction(epoch=>document.querySelector('#stage').dataset.epoch===epoch,before.epoch);
     await clickAt(guest,315,220);await host.waitForFunction(old=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').bullets[1]===old-1,before.bullets[1],{timeout:5000});
@@ -47,5 +52,9 @@ test('actual Flash co-op: reservation, shared finds, colored rings, cursors, ite
   }
   await guest.locator('#newGame').click();await host.waitForFunction(()=>document.querySelector('#stage').dataset.phase==='selecting');await guest.waitForFunction(()=>document.querySelector('#stage').dataset.phase==='selecting');assert.equal(await host.locator('.character-button:not(:disabled)').count(),1);await host.locator('[data-character="1"]').click();await guest.locator('[data-character="2"]').click();await host.waitForFunction(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').enabled===true);assert.equal((await nativeCall(host,'coopSnapshot')).life,3);
   await guest.locator('#leaveRoom').click();await host.waitForFunction(()=>!document.querySelector('#pauseOverlay').hidden);assert.deepEqual(errors,[]);assert.deepEqual(external,[]);console.log('PASS real original game, direct media, native blue/red marks, input locks, both original minigames, personal bullets, shared pause and restart.');
+ }catch(error){
+  for(const context of a?.contexts()||[])for(const page of context.pages())await page.screenshot({path:path.join(root,'scratch/coop-failure.png'),fullPage:true}).catch(()=>{});
+  for(const context of a?.contexts()||[])for(const page of context.pages())console.log('failure state',await nativeCall(page,'coopSnapshot').catch(()=>null),await nativeCall(page,'probeCursor').catch(()=>null),await page.evaluate(()=>({epoch:document.querySelector('#stage').dataset.epoch,notice:document.querySelector('#gameNotice').textContent,message:document.querySelector('#message').textContent})).catch(()=>null));
+  throw error;
  }finally{await a?.close();await b?.close();await new Promise(r=>local.server.close(r));}
 });

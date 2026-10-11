@@ -1,3 +1,4 @@
+import {packSdp,unpackSdp} from './compact-sdp.mjs';
 const CODE_LIMIT=32768,SDP_LIMIT=20000,BYTE_LIMIT=80000;
 // HG2's fixed lossless dictionary. Changing its order requires a new code version.
 const dictionary=[
@@ -37,16 +38,22 @@ async function transform(bytes,stream,limit) {
   const result=new Uint8Array(total);let offset=0;
   for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.length;}return result;
 }
-function pack(value) {
-  let text=value.sdp.replaceAll('\0','\0\0');
-  for(let i=0;i<dictionary.length;i++)text=text.replaceAll(dictionary[i],'\0'+String.fromCharCode(i+1));
-  const body=encoder.encode(text),bytes=new Uint8Array(20+body.length);bytes[0]=value.kind==='offer'?0:1;
+function pack(value,compact=false) {
+  let body;
+  if(compact)body=packSdp(value.sdp);
+  else{
+    let text=value.sdp.replaceAll('\0','\0\0');
+    for(let i=0;i<dictionary.length;i++)text=text.replaceAll(dictionary[i],'\0'+String.fromCharCode(i+1));
+    body=encoder.encode(text);
+  }
+  const bytes=new Uint8Array(20+body.length);bytes[0]=value.kind==='offer'?0:1;
   const metadata=value.session+value.room;
   for(let i=0;i<19;i++)bytes[i+1]=Number.parseInt(metadata.slice(i*2,i*2+2),16);
   bytes.set(body,20);return bytes;
 }
-function unpack(bytes) {
+function unpack(bytes,compact=false) {
   if(bytes.length<20||bytes[0]>1)throw invalid();
+  if(compact)return validate({version:1,kind:bytes[0]===0?'offer':'answer',session:hex(bytes.subarray(1,17)),room:hex(bytes.subarray(17,20)).toUpperCase(),sdp:unpackSdp(bytes.subarray(20))});
   const body=[];
   for(let i=20;i<bytes.length;i++){
     if(bytes[i]!==0)body.push(bytes[i]);
@@ -58,23 +65,25 @@ function unpack(bytes) {
   }
   return validate({version:1,kind:bytes[0]===0?'offer':'answer',session:hex(bytes.subarray(1,17)),room:hex(bytes.subarray(17,20)).toUpperCase(),sdp:decoder.decode(Uint8Array.from(body))});
 }
-export async function encodeCode(value,{legacy=false}={}) {
+export async function encodeCode(value,{legacy=false,format=3}={}) {
   validate(value);
   let code;
   if(legacy||typeof CompressionStream!=='function'||typeof DecompressionStream!=='function')code='HG1-'+base64(encoder.encode(JSON.stringify(value)));
   else {
     if(decoder.decode(encoder.encode(value.sdp))!==value.sdp)throw invalid();
-    code='HG2-'+base64(await transform(pack(value),new CompressionStream('gzip'),CODE_LIMIT));
+    const compact=format!==2;
+    code=(compact?'HG3-':'HG2-')+base64(await transform(pack(value,compact),new CompressionStream(compact?'deflate':'gzip'),CODE_LIMIT));
   }
   if(code.length>CODE_LIMIT)throw Error('연결 코드가 너무 깁니다.');return code;
 }
 export async function decodeCode(text) {
   if(typeof text!=='string'||text.length>CODE_LIMIT)throw Error('연결 코드가 너무 깁니다.');
   const code=text.replace(/\s/g,'');
-  if(!/^HG[12]-[A-Za-z0-9_-]+$/.test(code))throw Error('6자리 방 번호 대신 전체 초대 또는 응답 코드를 붙여 넣으세요.');
-  if(code.startsWith('HG2-')&&typeof DecompressionStream!=='function')throw Error('이 압축 코드를 사용하려면 Chrome 또는 Edge를 최신 버전으로 업데이트하세요.');
+  if(!/^HG[123]-[A-Za-z0-9_-]+$/.test(code))throw Error('6자리 방 번호 대신 전체 초대 또는 응답 코드를 붙여 넣으세요.');
+  if(!code.startsWith('HG1-')&&typeof DecompressionStream!=='function')throw Error('이 압축 코드를 사용하려면 Chrome 또는 Edge를 최신 버전으로 업데이트하세요.');
   try {
     const raw=atob(code.slice(4).replaceAll('-','+').replaceAll('_','/')),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
-    return code.startsWith('HG1-')?validate(JSON.parse(decoder.decode(bytes))):unpack(await transform(bytes,new DecompressionStream('gzip'),BYTE_LIMIT+20));
+    const compact=code.startsWith('HG3-');
+    return code.startsWith('HG1-')?validate(JSON.parse(decoder.decode(bytes))):unpack(await transform(bytes,new DecompressionStream(compact?'deflate':'gzip'),BYTE_LIMIT+20),compact);
   } catch {throw invalid();}
 }

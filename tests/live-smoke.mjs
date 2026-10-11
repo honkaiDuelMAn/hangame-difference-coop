@@ -13,6 +13,17 @@ try{
  for(const p of [host,guest])p.on('pageerror',e=>errors.push(e.message));
  host.on('request',r=>{if(/kro\d+\.xml$/.test(r.url()))requestedXML.push(r.url());});
  await connect(host,guest,url,{relay:true});
+ const linkSizes={};
+ for(const [kind,page] of [['invite',host],['answer',guest]]){
+  linkSizes[kind]=await page.evaluate(async kind=>{
+   const {readConnectionLink,makeConnectionLink}=await import('./net/connection-link.mjs');
+   const {decodeCode,encodeCode}=await import('./net/connection-code.mjs');
+   const link=document.querySelector('#outputLink').value,{code}=readConnectionLink(link,location.href);
+   const old=makeConnectionLink(await encodeCode(await decodeCode(code),{format:2}),kind,location.href);
+   return {current:link.length,previous:old.length,compact:code.startsWith('HG3-')};
+  },kind);
+  assert.equal(linkSizes[kind].compact,true);assert.ok(linkSizes[kind].current<linkSizes[kind].previous*.5);
+ }
  assert.equal(await host.locator('.character-button:not(:disabled)').count(),1);assert.equal(await guest.locator('.character-button:not(:disabled)').count(),1);
  await host.locator('[data-character="1"]').click();await guest.locator('[data-character="2"]').click();
  await host.waitForFunction(()=>!document.querySelector('#useGlasses').disabled);await guest.waitForFunction(()=>document.querySelector('#remoteVideo').readyState>=2);
@@ -34,5 +45,5 @@ try{
  const marker=await guest.locator('#inputLayer').boundingBox();await guest.locator('#pauseGame').click();await guest.mouse.move(marker.x+marker.width*.6,marker.y+marker.height*.35);await host.waitForFunction(()=>!document.querySelector('#cursor1').hidden);assert.match(await host.locator('#cursor1 img').getAttribute('src'),/girl/);
  await host.evaluate(()=>window.scrollTo(0,0));fs.mkdirSync(path.join(root,'scratch'),{recursive:true});await host.screenshot({path:path.join(root,'scratch/deployed-coop.png')});
  await guest.locator('#newGame').click();await host.waitForFunction(()=>document.querySelector('#stage').dataset.phase==='selecting');assert.deepEqual(errors,[]);
- console.log(JSON.stringify({url,connection:'independent Chrome processes; actual invitation and answer relay',originalSWF:'served unmodified from Pages',guestNativeVideo:await guest.evaluate(()=>({width:remoteVideo.videoWidth,height:remoteVideo.videoHeight})),foundBy2P:true,sharedResources:true,lock:true,pause:true,restart:true,errors}));
+ console.log(JSON.stringify({url,connection:'independent Chrome processes; actual invitation and answer relay',linkSizes,originalSWF:'served unmodified from Pages',guestNativeVideo:await guest.evaluate(()=>({width:remoteVideo.videoWidth,height:remoteVideo.videoHeight})),foundBy2P:true,sharedResources:true,lock:true,pause:true,restart:true,errors}));
 }finally{await a?.close();await b?.close();}

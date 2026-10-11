@@ -85,7 +85,7 @@ export class ManualPeer {
       changed();
     });
     if(this.closed)throw Error('연결을 취소했습니다.');
-    return this.operation(encodeCode({version:1,kind:pc.localDescription.type,session:this.session,room:this.room,sdp:pc.localDescription.sdp},{legacy:this.legacyCode}));
+    return this.operation(encodeCode({version:1,kind:pc.localDescription.type,session:this.session,room:this.room,sdp:pc.localDescription.sdp},{legacy:this.legacyCode,format:this.codeFormat||3}));
   }
   startTimer() {clearTimeout(this.timer);this.timer=setTimeout(()=>this.fail(),this.connectTimeout);}
   operation(promise) {
@@ -107,6 +107,7 @@ export class ManualPeer {
   async answer(text) {
     const offer=await decodeCode(text);if(offer.kind!=='offer')throw Error('방을 만든 사람의 초대 코드를 입력하세요.');
     this.legacyCode=text.replace(/\s/g,'').startsWith('HG1-');
+    this.codeFormat=text.replace(/\s/g,'').startsWith('HG2-')?2:3;
     this.session=offer.session;this.room=offer.room;const pc=this.setup();
     await this.operation(pc.setRemoteDescription({type:'offer',sdp:offer.sdp}));
     await this.operation(pc.setLocalDescription(await this.operation(pc.createAnswer())));

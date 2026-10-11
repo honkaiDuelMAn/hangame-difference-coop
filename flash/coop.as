@@ -1,5 +1,30 @@
 var b = _global.hangameCoop = {started:false, ready:false, actor:0, ammo:[1,1], miniKey:"", marks:{}, lastFind:0, lastEpoch:"", sent:0};
 var ei = flash.external.ExternalInterface;
+b.pixelGrid = function(width,height) {
+    this.pixelScale = Math.min(Number(width)/640,Number(height)/480);
+    this.pixelOffsetX = (Number(width)-640*this.pixelScale)/2;
+    this.pixelOffsetY = (Number(height)-480*this.pixelScale)/2;
+    this.alignPictures();
+    return true;
+};
+b.alignPictures = function() {
+    var im = _global.Framework.logic.im;
+    if (!(this.pixelScale > 0) || im.mc2.img == undefined) return;
+    im.mc1.img._x=0;im.mc1.img._y=0;im.mc2.img._x=0;im.mc2.img._y=0;
+    if (im.magic_b) return;
+    var images=[im.mc1.img,im.mc2.img];
+    for(var i=0;i<2;i++) {
+        var m=images[i].transform.concatenatedMatrix;
+        if(m.b!=0 || m.c!=0 || m.a!=1 || m.d!=1) continue;
+        // display.mjs chooses a surface size that admits exact twip offsets.
+        // Move only the bitmap, by at most half an output pixel; source art,
+        // hitboxes, answer areas and native outer animations stay unchanged.
+        var dx=(Math.round(m.tx*this.pixelScale+this.pixelOffsetX)-this.pixelOffsetX)/this.pixelScale-m.tx;
+        var dy=(Math.round(m.ty*this.pixelScale+this.pixelOffsetY)-this.pixelOffsetY)/this.pixelScale-m.ty;
+        images[i]._x=Math.round(dx*20)/20;
+        images[i]._y=Math.round(dy*20)/20;
+    }
+};
 b.scene = function() {
     var r = _global.Framework.root;
     if (r.minigame_mc2._visible && r.minigame_mc2._currentframe > 1) return r.minigame_mc2;
@@ -70,6 +95,25 @@ b.end = function() {
     this.colorMarks();
     return this.snapshot();
 };
+b.useItem = function(kind) {
+    var f = _global.Framework;
+    var s = this.snapshot();
+    if (s.mode != "puzzle" || !s.enabled) return false;
+    var button = kind == "life" ? f.root.helpme : (kind == "glasses" ? f.root.magic : null);
+    if (button == null || !button.enabled || typeof(button.onRelease) != "function") return false;
+    if ((kind == "life" ? s.life : s.item) <= 0) return false;
+    // Invoke the unchanged native item handler without entering its hover art.
+    button.onRelease();
+    return true;
+};
+b.introButton = function(x,y) {
+    var m = this.scene();
+    var button = m.start_btn;
+    if (!this.started || m == null || m.bullet_mc != undefined || !button._visible) return false;
+    if (typeof(button.onRelease) != "function" || !button.hitTest(Number(x),Number(y),true)) return false;
+    button.onRelease();
+    return true;
+};
 b.shoot = function() {
     var m = this.scene();
     if (m == null || m.clickEnabled != true || m.bullet_mc == undefined) return false;
@@ -115,6 +159,7 @@ b.poll = function() {
     if (f.root == undefined || typeof(f.ui.showMain) != "function") return;
     if (!this.ready) { this.ready = true; ei.call("coopEvent", "ready", {}); }
     if (!this.started) return;
+    this.alignPictures();
     f.root.cursorboy_mc._visible = false;
     f.root.cursorgirl_mc._visible = false;
     f.logic.cursor_mc._visible = false;
@@ -131,8 +176,11 @@ b.poll = function() {
 ei.addCallback("coopStart", b, b.start);
 ei.addCallback("coopReset", b, b.reset);
 ei.addCallback("coopPause", b, b.pause);
+ei.addCallback("coopPixelGrid", b, b.pixelGrid);
 ei.addCallback("coopBeginAction", b, b.begin);
 ei.addCallback("coopEndAction", b, b.end);
+ei.addCallback("coopUseItem", b, b.useItem);
+ei.addCallback("coopIntroButton", b, b.introButton);
 ei.addCallback("coopSnapshot", b, b.snapshot);
 ei.addCallback("coopShoot", b, b.shoot);
 ei.addCallback("coopReload", b, b.reload);
