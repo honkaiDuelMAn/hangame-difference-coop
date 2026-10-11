@@ -30,12 +30,12 @@ try{
  await host.locator('[data-character="1"]').click();await guest.locator('[data-character="2"]').click();
  await host.waitForFunction(()=>!document.querySelector('#useGlasses').disabled);await guest.waitForFunction(()=>document.querySelector('#remoteVideo').readyState>=2);
  // Read public original coordinates; do not replace or instrument the deployed SWF.
- let found=false;
+ let found=false,matchedSource=null;
  for(const source of [...new Set(requestedXML)]){
   const xml=await (await host.request.get(source)).text();
   for(const m of xml.matchAll(/<clip\s+rect="(\d+),\s*(\d+),\s*(\d+),\s*(\d+)"/g)){
    const [x,y,w,h]=m.slice(1).map(Number);await clickAt(guest,30+x+w/2,5+y+h/2);await host.waitForTimeout(120);
-   if(parseInt(await host.locator('#foundStat').innerText(),10)>0){found=true;break;}
+   if(parseInt(await host.locator('#foundStat').innerText(),10)>0){found=true;matchedSource=source;break;}
   }
   if(found)break;
  }
@@ -52,7 +52,9 @@ try{
   for(let picture=0;picture<4;picture++){
    await host.waitForFunction(()=>{const s=document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot');return s.mode==='puzzle'&&s.enabled;},null,{timeout:15000});
    const current=await state();await guest.waitForFunction(epoch=>document.querySelector('#stage').dataset.epoch===epoch,current.epoch);
-   const xml=await (await host.request.get(requestedXML.at(-1))).text();
+   // The original preloads the next picture, so the last requested XML is ahead
+   // of the currently displayed stage. Follow its native request order instead.
+   const source=requestedXML[requestedXML.indexOf(matchedSource)+picture],xml=await (await host.request.get(source)).text();
    for(const m of xml.matchAll(/<clip\s+rect="(\d+),\s*(\d+),\s*(\d+),\s*(\d+)"/g)){
     if((await state()).epoch!==current.epoch||(await state()).find===5)break;
     await host.waitForFunction(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').enabled,null,{timeout:4000});
