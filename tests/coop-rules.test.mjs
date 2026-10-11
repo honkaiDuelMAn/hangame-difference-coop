@@ -15,3 +15,9 @@ test('replayed, stale stage and previous session requests cannot be applied agai
 test('pause and disconnect stop both seats from forwarding game input',()=>{const r=playing();r.paused=true;assert.equal(r.authorize(0,input(1),state,0).ok,false);r.paused=false;r.setConnected(false);assert.equal(r.authorize(1,input(1),state,1).ok,false);});
 test('malformed seats, character IDs, coordinates and commands are rejected',()=>{const r=playing();for(const p of [input(1,'script'),input(2,'click',{x:NaN}),input(3,'click',{x:-1}),input(4,'click',{y:481})])assert.equal(r.authorize(1,p,state,0).ok,false);assert.equal(r.authorize(9,input(5),state,0).ok,false);assert.equal(r.select(0,8).ok,false);});
 test('minigame reload belongs to requesting seat and does not lock shared resources',()=>{const r=playing();assert.equal(r.authorize(1,input(1,'reload',{epoch:'mini:1'}),{...state,epoch:'mini:1',mode:'mini'},0).ok,true);assert.equal(r.lockUntil,0);assert.equal(r.authorize(0,input(1,'reload'),state,1).ok,false);});
+test('result NEXT overlap remains a click and cannot consume a shared resource',()=>{
+ const r=playing(),result={...state,epoch:'result:1:5:103',mode:'result',enabled:false};
+ const accepted=r.authorize(1,input(1,'click',{epoch:result.epoch,x:480,y:450}),result,0);
+ assert.equal(accepted.ok,true);assert.equal(accepted.event.kind,'click');assert.equal(r.lockUntil,0);
+ assert.equal(r.authorize(0,input(1,'glasses',{epoch:result.epoch}),result,1).ok,false);
+});

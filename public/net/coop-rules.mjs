@@ -1,5 +1,5 @@
-export function normalizeAction(event){
-  if(event?.kind==='click'&&event.y>=445&&event.y<=480){
+export function normalizeAction(event,state){
+  if(state?.mode==='puzzle'&&event?.kind==='click'&&event.y>=445&&event.y<=480){
     if(event.x>=226&&event.x<=334)return {...event,kind:'life'};
     if(event.x>=338&&event.x<=495)return {...event,kind:'glasses'};
   }
@@ -17,7 +17,7 @@ export class CoopRoom {
     return {ok:true,start:this.phase==='playing'};
   }
   authorize(seat,event,state,now){
-    event=normalizeAction(event);
+    event=normalizeAction(event,state);
     const fail=error=>({ok:false,error});
     if(!this.connected||this.paused||this.phase!=='playing')return fail('게임 진행이 멈춰 있습니다.');
     if(![0,1].includes(seat)||!event||event.run!==this.run||!Number.isSafeInteger(event.seq)||event.seq<=this.sequences[seat])return fail('만료되거나 중복된 요청입니다.');

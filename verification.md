@@ -1,5 +1,13 @@
 # Verification — 2026-10-11
 
+## NEXT and room chat follow-up
+
+- Stable full suite: **37/37 passed**, 147.862 seconds. Python checks **4/4 passed**; build preserves all **1573 original main tags**. Static staging includes **419 files** without diagnostic SWFs.
+- Result NEXT uses its original native release handler only when the active popup's button is visible/enabled and its rectangle is hit. Explicit result mode prevents the lower NEXT region from being normalized into glasses use. Independent in-memory original SWF parsing verified Button298 at local (0,0), 123×40, and centered outer-popup Button519 at (-50.15,-18.15); both origins are accounted for.
+- Regression plays four actual pictures per level and the original bonus flow. Timeout/failure and native success both reach results. 1P then 2P press NEXT, including its old glasses overlap at (480,450); outside clicks do not skip; item count is unchanged. Each transition reaches a real new puzzle at the next level, find=0 and time>0. Actual score bookkeeping is preserved rather than forcing a stage/status shortcut. Original standalone minigame2 has retry/back and no bonus NEXT; the new progression test targets the correct native bonus flow.
+- Chat browser checks pass: Korean/English/digits both directions; composing Enter does not submit; messages render as literal text; game hotkeys do not fire while typing; active chat focus is restored before asynchronous native input waits; paused chat, same-connection restart/disconnect retention, new-room reset, session/sequence/length validation, receiver-owned identity, 200-message bound, left desktop panel and mobile layout without horizontal scrolling.
+- Independent read-only review approved final result geometry and chat focus handling. Existing pencil hotspots, shared lock, native actions, pause/restart, compact/legacy transport, and all fifteen Heaven pixel comparisons remain passing.
+
 ## Link, display and native-item follow-up
 
 - Final stable `node --test --test-concurrency=1 tests/*.test.mjs`: **34/34 passed**, 91.295 seconds. Python preservation/staging checks: **4/4 passed**. All **1573 original main SWF tags** remain byte-identical.

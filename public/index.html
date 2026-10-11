@@ -3,6 +3,12 @@
 <body><main>
   <header class="masthead"><div><p class="eyebrow">한게임 틀린그림찾기 · 첩보요원 양성소</p><h1>둘이 함께, <span>틀린그림찾기</span></h1><p class="subtitle">같은 그림을 보고, 서로의 발견을 이어가요.</p></div><span id="connectionBadge" class="badge">연결 대기</span></header>
   <div class="layout">
+    <aside id="chatPanel" class="chat-panel" aria-label="방 채팅">
+      <div class="chat-heading"><h2>방 채팅</h2><span>1P · 2P</span></div>
+      <div class="chat-body"><div id="chatMessages" role="log" aria-label="채팅 메시지 목록" aria-live="polite" aria-relevant="additions"></div><p id="chatEmpty">상대와 인사를 나눠보세요.</p></div>
+      <form id="chatForm"><input id="chatInput" aria-label="채팅 메시지" placeholder="메시지를 입력하세요" maxlength="500" autocomplete="off" spellcheck="false" disabled><button id="chatSend" type="submit" disabled>전송</button></form>
+      <p id="chatStatus" class="chat-status" role="status">두 사람이 연결되면 채팅할 수 있어요.</p>
+    </aside>
     <section class="play-section" aria-label="협동 게임">
       <div class="game-top"><span class="red-dot">1P 빨간 동그라미</span><span class="blue-dot">2P 파란 동그라미</span><span id="seatLabel">2인 협동</span></div>
       <div id="stage" class="stage" data-phase="offline">

@@ -7,15 +7,17 @@ import {prepareAudio,setHostVolume} from './media.mjs';
 import {drawQR} from './qr.mjs';
 import {characters} from './characters.mjs';
 import {fitGameFrame} from './display.mjs';
+import {createRoomChat} from './chat.mjs';
 
 const $=id=>document.getElementById(id);
 fitGameFrame(document.querySelector('.play-section'));
 let peer,inbox,engine,room,seat=null,busy=false,seq=0,jobs=Promise.resolve(),native={},lastPointerSent=0,manualPaused=false;
 let view={run:null,connected:false,phase:'selecting',characters:[null,null],paused:false,locked:0};
 const positions=[null,null];
+const chat=createRoomChat({send});
 function message(text,error=false){$('message').textContent=text;$('message').classList.toggle('error',error);}
 function notice(text){$('gameNotice').textContent=text;}
-function send(event){if(peer?.channel?.readyState==='open')peer.send(event);}
+function send(event){if(peer?.channel?.readyState==='open'){peer.send(event);return true;}return false;}
 function updateNative(value){native=value||{};if(seat===0&&room)publish();}
 function snapshot(){return {type:'room',protocol:1,run:room.run,connected:room.connected,phase:room.phase,characters:room.characters,paused:room.paused,pauseReason:document.hidden?'background':'manual',locked:Math.max(0,room.lockUntil-performance.now()),native};}
 function applyPause(){room.paused=manualPaused||document.hidden;engine.pause(room.paused);publish();}
@@ -25,6 +27,7 @@ function pointer(seatNumber,pos){positions[seatNumber]=pos;renderPointers();}
 function renderPointers(){for(let i=0;i<2;i++){const el=$('cursor'+i),pos=positions[i],character=characters[view.characters?.[i]];el.hidden=!pos||!character||view.phase!=='playing'||view.paused;if(!el.hidden){el.style.left=pos.x/640*100+'%';el.style.top=pos.y/480*100+'%';el.style.width=character.width/640*100+'%';el.style.height=character.height/480*100+'%';el.style.transform=`translate(${-character.hotX/character.width*100}%,${-character.hotY/character.height*100}%)`;el.querySelector('img').src=`./assets/${character.image}.png`;}}}
 function render(){
   const connected=view.connected,playing=view.phase==='playing',canPlay=connected&&playing&&!view.paused;
+  chat.setConnection(peer?.session,seat,connected);
   $('stage').dataset.phase=playing?'playing':connected?'selecting':'offline';$('stage').dataset.run=view.run||'';$('stage').dataset.epoch=native.epoch||'';$('stage').dataset.seat=seat??'';
   $('connectionBadge').textContent=connected?'연결 완료':busy?'준비 중…':peer&&!peer.closed?'링크 교환 중':'연결 대기';$('connectionBadge').classList.toggle('connected',connected);
   $('seatLabel').textContent=seat===null?'2인 협동':`${seat+1}P${seat===0?' · 방장':''}`;
@@ -59,6 +62,7 @@ function onPeerState(state,error){
 function makePeer(mediaStream=null){return new ManualPeer({mediaStream,onMessage:receive,onState:onPeerState,onTrack:stream=>{const video=$('remoteVideo');video.srcObject=stream;video.hidden=false;$('cover').hidden=true;video.play().catch(()=>{});}});}
 export function receive(event){
   if(!event||typeof event!=='object')return;
+  if(event.type==='chat'){chat.receive(event);return;}
   if(event.type==='hello'){
     if(event.protocol!==1){message('서로 같은 최신 게임 페이지로 접속해 주세요.',true);peer.close();return;}
     if(seat===0){room.setConnected(true);publish();}return;

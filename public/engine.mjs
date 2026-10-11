@@ -34,6 +34,7 @@ export class OriginalGame {
     // first, so the native event uses the same canvas position as the overlay.
     const target=this.player.shadowRoot.querySelector('#container');
     target.focus({preventScroll:true});
+    const restoreFocus=()=>{if(focus?.isConnected&&document.activeElement===this.player)focus.focus({preventScroll:true});};
     if(event.kind==='reload'){
       target.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',keyCode:32,which:32,bubbles:true,composed:true}));
       // Poll the original key-driven reload once while Space is held.
@@ -50,13 +51,16 @@ export class OriginalGame {
       const rect=this.canvas.getBoundingClientRect(),clientX=rect.left+x*rect.width/640,clientY=rect.top+y*rect.height/480;
       const fire=type=>this.canvas.dispatchEvent(new PointerEvent(type,{bubbles:true,composed:true,clientX,clientY,pointerId:1,pointerType:'mouse',isPrimary:true,button:type==='pointermove'?-1:0,buttons:type==='pointerdown'?1:0}));
       fire('pointermove');
-      if(before.mode==='mini'&&before.enabled){
+      if(before.mode==='result'){
+        this.call('coopResultButton',x,y);
+      }else if(before.mode==='mini'&&before.enabled){
+        restoreFocus();
         const deadline=performance.now()+150;
         while(!this.call('coopShoot')&&performance.now()<deadline)await new Promise(resolve=>setTimeout(resolve,8));
       }else if(before.mode!=='mini-intro'||!this.call('coopIntroButton',x,y)){fire('pointerdown');fire('pointerup');}
     }
+    restoreFocus();
     await new Promise(resolve=>setTimeout(resolve,85));
-    if(focus?.isConnected)focus.focus({preventScroll:true});
     const state=this.call('coopEndAction');this.onState(state);return state;
   }
 }

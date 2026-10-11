@@ -13,6 +13,8 @@ try{
  for(const p of [host,guest])p.on('pageerror',e=>errors.push(e.message));
  host.on('request',r=>{if(/kro\d+\.xml$/.test(r.url()))requestedXML.push(r.url());});
  await connect(host,guest,url,{relay:true});
+ await host.locator('#chatInput').fill('함께 찾아요 Hello 123');await host.locator('#chatInput').press('Enter');await guest.waitForFunction(()=>document.querySelector('#chatMessages').textContent.includes('함께 찾아요 Hello 123'));
+ await guest.locator('#chatInput').fill('좋아요 ABC 456');await guest.locator('#chatSend').click();await host.waitForFunction(()=>document.querySelector('#chatMessages').textContent.includes('좋아요 ABC 456'));
  const linkSizes={};
  for(const [kind,page] of [['invite',host],['answer',guest]]){
   linkSizes[kind]=await page.evaluate(async kind=>{
@@ -44,6 +46,29 @@ try{
  await host.locator('#pauseGame').click();await guest.waitForFunction(()=>!document.querySelector('#pauseOverlay').hidden);
  const marker=await guest.locator('#inputLayer').boundingBox();await guest.locator('#pauseGame').click();await guest.mouse.move(marker.x+marker.width*.6,marker.y+marker.height*.35);await host.waitForFunction(()=>!document.querySelector('#cursor1').hidden);assert.match(await host.locator('#cursor1 img').getAttribute('src'),/girl/);
  await host.evaluate(()=>window.scrollTo(0,0));fs.mkdirSync(path.join(root,'scratch'),{recursive:true});await host.screenshot({path:path.join(root,'scratch/deployed-coop.png')});
+ let nextResult=false;
+ if(process.env.FULL_NEXT==='1'){
+  const state=()=>host.evaluate(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot'));
+  for(let picture=0;picture<4;picture++){
+   await host.waitForFunction(()=>{const s=document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot');return s.mode==='puzzle'&&s.enabled;},null,{timeout:15000});
+   const current=await state();await guest.waitForFunction(epoch=>document.querySelector('#stage').dataset.epoch===epoch,current.epoch);
+   const xml=await (await host.request.get(requestedXML.at(-1))).text();
+   for(const m of xml.matchAll(/<clip\s+rect="(\d+),\s*(\d+),\s*(\d+),\s*(\d+)"/g)){
+    if((await state()).epoch!==current.epoch||(await state()).find===5)break;
+    await host.waitForFunction(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').enabled,null,{timeout:4000});
+    const [x,y,w,h]=m.slice(1).map(Number);await clickAt(guest,30+x+w/2,8+y+h/2);await host.waitForTimeout(200);
+   }
+   assert.ok((await state()).find===5||(await state()).epoch!==current.epoch,'public picture '+current.stage+' completes from original coordinates');
+   console.log('public picture complete',current.level,current.stage);
+  }
+  await host.waitForFunction(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').mode==='mini-intro',null,{timeout:12000});await host.waitForTimeout(1700);await clickAt(guest,550,430);
+  await host.waitForFunction(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').mode==='mini',null,{timeout:8000});
+  await host.waitForFunction(()=>document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot').mode==='result',null,{timeout:50000});
+  await guest.waitForFunction(()=>document.querySelector('#stage').dataset.epoch.startsWith('result:'));
+  for(let i=0;i<25&&(await state()).level===1;i++){await clickAt(guest,480,450);await host.waitForTimeout(400);}
+  await host.waitForFunction(()=>{const s=document.querySelector('ruffle-player').ruffle().callExternalInterface('coopSnapshot');return s.level===2&&s.stage===1&&s.mode==='puzzle'&&s.enabled&&s.find===0&&s.time>0;},null,{timeout:12000});
+  nextResult=true;
+ }
  await guest.locator('#newGame').click();await host.waitForFunction(()=>document.querySelector('#stage').dataset.phase==='selecting');assert.deepEqual(errors,[]);
- console.log(JSON.stringify({url,connection:'independent Chrome processes; actual invitation and answer relay',linkSizes,originalSWF:'served unmodified from Pages',guestNativeVideo:await guest.evaluate(()=>({width:remoteVideo.videoWidth,height:remoteVideo.videoHeight})),foundBy2P:true,sharedResources:true,lock:true,pause:true,restart:true,errors}));
+ console.log(JSON.stringify({url,connection:'independent Chrome processes; actual invitation and answer relay',linkSizes,originalSWF:'served unmodified from Pages',guestNativeVideo:await guest.evaluate(()=>({width:remoteVideo.videoWidth,height:remoteVideo.videoHeight})),chat:'Korean, English, digits; bidirectional',nextResult,foundBy2P:true,sharedResources:true,lock:true,pause:true,restart:true,errors}));
 }finally{await a?.close();await b?.close();}
