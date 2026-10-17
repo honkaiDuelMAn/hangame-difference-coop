@@ -1,6 +1,6 @@
 # Ledger — plan: docs/superpowers/plans/2026-10-10-coop.md
 
-Follow-up 2026-10-17: added InuYasha-style volume slider below the game. Each listener has independent 0–100% control; host preview mute leaves the outgoing audio untouched. Pre-load choice, ready/sound unlock and same-page restart retain the setting. New real-browser regression passed after an absent-slider RED; it also passes without autoplay exemptions. Full suite 38/38 (156.829s), Python 4/4, staging 419 files, local production-only smoke and independent review pass. Publication verification pending.
+Follow-up 2026-10-17 complete: added InuYasha-style volume slider below the game. Each listener has independent 0–100% control; host preview mute leaves the outgoing audio untouched. Pre-load choice, ready/sound unlock and same-page restart retain the setting. New real-browser regression passed after an absent-slider RED; it also passes without autoplay exemptions. Full suite 38/38 (156.829s), Python 4/4, staging 419 files and independent review pass. Deployment 39042650779 succeeded for runtime commit 02ce71e. Public production-only two-browser smoke verifies slider, mute, sound unlock, actual game actions, chat and restart with zero page errors. Live manifest matches all 419 files and nine served hashes; diagnostics absent.
 
 User approved the concrete design and explicitly skipped further approval gates. Execute inline, with one independent final review.
 
