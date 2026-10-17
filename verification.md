@@ -1,4 +1,11 @@
-# Verification — 2026-10-11
+# Verification — 2026-10-17
+
+## Volume slider follow-up
+
+- Added an accessible 0–100% slider below the game, matching the InuYasha control pattern. Host output retains its previous 65% default. Zero mutes; a positive guest setting unmutes. Each browser controls only its own listener output, and readiness, sound unlock and same-page resets retain the setting.
+- New real-browser regression failed first because the slider was absent, then passed. It covers pre-load settings, both listeners, mute/unmute, ready/unlock/reset, desktop/mobile layout, and a real generated tone that remains in the outgoing audio while host preview is muted. The same regression also passed with the test helper's autoplay exemption removed.
+- Full project suite: **38/38 passed**, 156.829 seconds. Python checks **4/4 passed**. Staging contains **419 static files**, diagnostic SWFs excluded; whitespace check passes. Independent bounded review reported no actionable findings. Existing native result progression, chat, shared-resource rules, transport compatibility and all fifteen Heaven pixel comparisons remain passing.
+- Production-only smoke script passed locally with the unmodified production SWF: real two-browser invitation/answer relay, keyboard slider adjustment, local mute and sound unlock, bidirectional chat, actual 2P find, shared resources/lock, pause and restart; zero page errors. Public deployment verification follows after publication.
 
 ## NEXT and room chat follow-up
 

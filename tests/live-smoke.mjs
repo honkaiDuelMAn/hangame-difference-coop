@@ -29,6 +29,15 @@ try{
  assert.equal(await host.locator('.character-button:not(:disabled)').count(),1);assert.equal(await guest.locator('.character-button:not(:disabled)').count(),1);
  await host.locator('[data-character="1"]').click();await guest.locator('[data-character="2"]').click();
  await host.waitForFunction(()=>!document.querySelector('#useGlasses').disabled);await guest.waitForFunction(()=>document.querySelector('#remoteVideo').readyState>=2);
+ // Volume is local to each listener, including after the ready sound unlock.
+ await host.locator('#volume').focus();await host.keyboard.press('Home');
+ assert.equal(await host.locator('#volumeValue').innerText(),'음소거');
+ await guest.locator('#volume').focus();await guest.keyboard.press('End');
+ assert.equal(await guest.locator('#remoteVideo').evaluate(v=>v.volume),1);
+ await guest.keyboard.press('Home');assert.equal(await guest.locator('#remoteVideo').evaluate(v=>v.muted),true);
+ await guest.keyboard.press('End');await guest.locator('#enableSound').click();
+ assert.equal(await guest.locator('#remoteVideo').evaluate(v=>v.volume),1);assert.equal(await guest.locator('#remoteVideo').evaluate(v=>v.muted),false);
+ assert.equal(await host.locator('#volume').inputValue(),'0');
  // Read public original coordinates; do not replace or instrument the deployed SWF.
  let found=false,matchedSource=null;
  for(const source of [...new Set(requestedXML)]){
@@ -72,5 +81,5 @@ try{
   nextResult=true;
  }
  await guest.locator('#newGame').click();await host.waitForFunction(()=>document.querySelector('#stage').dataset.phase==='selecting');assert.deepEqual(errors,[]);
- console.log(JSON.stringify({url,connection:'independent Chrome processes; actual invitation and answer relay',linkSizes,originalSWF:'served unmodified from Pages',guestNativeVideo:await guest.evaluate(()=>({width:remoteVideo.videoWidth,height:remoteVideo.videoHeight})),chat:'Korean, English, digits; bidirectional',nextResult,foundBy2P:true,sharedResources:true,lock:true,pause:true,restart:true,errors}));
+ console.log(JSON.stringify({url,connection:'independent Chrome processes; actual invitation and answer relay',linkSizes,originalSWF:'served unmodified from Pages',guestNativeVideo:await guest.evaluate(()=>({width:remoteVideo.videoWidth,height:remoteVideo.videoHeight})),chat:'Korean, English, digits; bidirectional',volume:'independent slider, mute and sound unlock',nextResult,foundBy2P:true,sharedResources:true,lock:true,pause:true,restart:true,errors}));
 }finally{await a?.close();await b?.close();}

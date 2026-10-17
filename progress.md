@@ -1,5 +1,7 @@
 # Ledger — plan: docs/superpowers/plans/2026-10-10-coop.md
 
+Follow-up 2026-10-17: added InuYasha-style volume slider below the game. Each listener has independent 0–100% control; host preview mute leaves the outgoing audio untouched. Pre-load choice, ready/sound unlock and same-page restart retain the setting. New real-browser regression passed after an absent-slider RED; it also passes without autoplay exemptions. Full suite 38/38 (156.829s), Python 4/4, staging 419 files, local production-only smoke and independent review pass. Publication verification pending.
+
 User approved the concrete design and explicitly skipped further approval gates. Execute inline, with one independent final review.
 
 Pre-flight: rules emit accepted requests consumed by app and Flash bridge; all boundary names are shared in spec. Original hooks are established by Task 1 before game implementation. New standalone repository is an isolated workspace; existing InuYasha checkout remains read-only.

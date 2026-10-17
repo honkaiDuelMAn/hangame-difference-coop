@@ -141,7 +141,19 @@ async function accept(text){
   if(seat!==0||!peer)throw Error('방을 만든 원래 탭에 응답 링크를 입력하세요.');
   const code=connectionInput(text,'answer',location.href);await peer.accept(code);message('응답을 적용했습니다. 두 사람의 연결을 기다리고 있습니다…');
 }
-async function enableSound(){if(seat===0){await prepareAudio();setHostVolume(.65);}else{const video=$('remoteVideo');video.muted=false;try{await video.play();}catch{notice('소리 켜기를 한 번 더 눌러 주세요.');}}}
+function applyVolume(activate=false){
+  const value=Number($('volume').value)/100,video=$('remoteVideo');
+  setHostVolume(value);video.volume=value;
+  if(activate||value===0)video.muted=value===0;
+  $('volumeValue').value=value===0?'음소거':Math.round(value*100)+'%';
+}
+async function enableSound(){
+  applyVolume(true);
+  if(seat===0)await prepareAudio();
+  else if(seat===1&&$('remoteVideo').srcObject){try{await $('remoteVideo').play();}catch{notice('소리 켜기를 한 번 더 눌러 주세요.');}}
+}
+$('volume').addEventListener('input',()=>enableSound().catch(error=>notice(error.message)));
+applyVolume();
 $('createRoom').addEventListener('click',create);
 $('joinForm').addEventListener('submit',event=>{event.preventDefault();join($('inviteInput').value);});
 $('answerForm').addEventListener('submit',event=>{event.preventDefault();accept($('answerInput').value).catch(error=>message(error.message,true));});
